@@ -14,7 +14,7 @@ RUN pip install --upgrade pip
 RUN pip install dlib-bin==20.0.1
 RUN pip install --prefer-binary -r requirements.txt
 
-CMD ["sh", "-c", "python manage.py migrate && gunicorn face_se.wsgi:application --bind 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000"]
 
 # FROM python:3.10
 
