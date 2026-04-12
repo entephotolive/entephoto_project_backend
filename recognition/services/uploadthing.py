@@ -41,6 +41,7 @@ def upload_to_uploadthing(file_bytes: bytes, filename: str) -> dict:
         headers={
             "X-Uploadthing-Api-Key": secret_key,
             "Content-Type": "application/json",
+            "X-Uploadthing-Version": "6.8.0",
         },
         json={
             "files": [
@@ -50,8 +51,6 @@ def upload_to_uploadthing(file_bytes: bytes, filename: str) -> dict:
                     "type": content_type,
                 }
             ],
-            "acl": "public-read",
-            "contentDisposition": "inline",
         },
         timeout=30,
     )
