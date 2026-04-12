@@ -66,20 +66,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Database — Supabase PostgreSQL (Session pooler)
+# Database — Railway PostgreSQL
 # ─────────────────────────────────────────────────────────────────────────────
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME':     os.getenv('DB_NAME', 'postgres'),
-        'USER':     os.getenv('DB_USER'),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST':     os.getenv('DB_HOST'),
-        'PORT':     os.getenv('DB_PORT', '5432'),
-        'OPTIONS': {
-            # Supabase requires SSL
-            'sslmode': 'require',
-        },
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+        'CONN_MAX_AGE': 600,
     }
 }
 
@@ -115,6 +112,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ─────────────────────────────────────────────────────────────────────────────
-# UploadThing
+# UploadThing Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 UPLOADTHING_SECRET_KEY = os.getenv('UPLOADTHING_SECRET_KEY')
+UPLOADTHING_APP_ID = os.getenv('UPLOADTHING_APP_ID')

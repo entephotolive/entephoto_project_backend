@@ -4,7 +4,7 @@ djangorestframework==3.17.1
 django-cors-headers==4.9.0
 
 # ── Database ───────────────────────────────────────────────────────────────────
-psycopg2-binary==2.9.10          # PostgreSQL driver (Supabase)
+psycopg2-binary==2.9.10          # PostgreSQL driver (Railway)
 
 # ── Face recognition ───────────────────────────────────────────────────────────
 # dlib is installed separately via precompiled wheel (see README / setup notes)
@@ -15,6 +15,7 @@ pillow==12.2.0
 
 # ── HTTP (UploadThing REST API) ────────────────────────────────────────────────
 requests==2.32.3
+uploadthing==0.6.0
 
 # ── Production server ──────────────────────────────────────────────────────────
 gunicorn==25.3.0
