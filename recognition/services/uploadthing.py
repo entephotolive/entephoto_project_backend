@@ -35,39 +35,84 @@ def upload_to_uploadthing(file_bytes: bytes, filename: str) -> dict:
     content_type, _ = mimetypes.guess_type(filename)
     content_type = content_type or "image/jpeg"
 
-    # ── Direct Server-Side Upload to UploadThing ─────────────────────────────
-    # For backend uploads, UploadThing V6 allows sending the file directly 
-    # as multipart/form-data rather than handling a 2-step presigned URL.
-    response = requests.post(
+    # ── Step 1: Request a presigned upload URL ─────────────────────────────────
+    presign_response = requests.post(
         f"{UPLOADTHING_API}/uploadFiles",
         headers={
             "X-Uploadthing-Api-Key": secret_key,
-            "X-Uploadthing-Version": "6.8.0",
+            "Content-Type": "application/json",
         },
-        files={
-            "files": (filename or f"{uuid.uuid4()}.jpg", file_bytes, content_type)
+        json={
+            "files": [
+                {
+                    "name": filename or f"{uuid.uuid4()}.jpg",
+                    "size": len(file_bytes),
+                    "type": content_type,
+                }
+            ],
+            "acl": "public-read",
+            "contentDisposition": "inline",
         },
-        timeout=60,
+        timeout=30,
     )
 
-    if response.status_code != 200:
+    if presign_response.status_code != 200:
         raise RuntimeError(
-            f"UploadThing upload failed [{response.status_code}]: "
-            f"{response.text}"
+            f"UploadThing presign failed [{presign_response.status_code}]: "
+            f"{presign_response.text}"
         )
 
-    data = response.json()
+    presign_data = presign_response.json()
 
-    # Extract metadata safely
-    file_info = None
-    if isinstance(data, list) and len(data) > 0:
-        file_info = data[0]
-    elif isinstance(data, dict) and "data" in data and isinstance(data["data"], list) and len(data["data"]) > 0:
-        file_info = data["data"][0]
+    # UploadThing returns a list of file upload configs
+    file_config = presign_data.get("data", [{}])[0]
+    upload_url = file_config.get("url")
+    fields = file_config.get("fields", {})
+    file_key = file_config.get("key")
+    final_url = file_config.get("fileUrl") or file_config.get("ufsUrl")
 
-    if file_info and (file_info.get("url") or file_info.get("fileUrl")):
-        final_url = file_info.get("url") or file_info.get("fileUrl")
-        file_key = file_info.get("key")
-        return {"url": final_url, "key": file_key}
+    if not upload_url:
+        raise RuntimeError(f"UploadThing returned no upload URL: {presign_data}")
 
-    raise RuntimeError(f"Unexpected UploadThing response format: {data}")
+    # ── Step 2: PUT/POST the file bytes to the presigned URL ───────────────────
+    if fields:
+        # S3-style multipart POST
+        upload_response = requests.post(
+            upload_url,
+            data=fields,
+            files={"file": (filename, io.BytesIO(file_bytes), content_type)},
+            timeout=60,
+        )
+    else:
+        # Direct PUT
+        upload_response = requests.put(
+            upload_url,
+            data=file_bytes,
+            headers={"Content-Type": content_type},
+            timeout=60,
+        )
+
+    if upload_response.status_code not in (200, 204):
+        raise RuntimeError(
+            f"UploadThing S3 upload failed [{upload_response.status_code}]: "
+            f"{upload_response.text}"
+        )
+
+    # ── Step 3: Poll for the final file URL if not returned in presign ─────────
+    if not final_url and file_key:
+        poll_response = requests.get(
+            f"{UPLOADTHING_API}/pollUpload/{file_key}",
+            headers={"X-Uploadthing-Api-Key": secret_key},
+            timeout=15,
+        )
+        if poll_response.status_code == 200:
+            poll_data = poll_response.json()
+            final_url = (
+                poll_data.get("fileData", {}).get("fileUrl")
+                or poll_data.get("url")
+            )
+
+    if not final_url:
+        final_url = f"https://utfs.io/f/{file_key}"
+
+    return {"url": final_url, "key": file_key}
