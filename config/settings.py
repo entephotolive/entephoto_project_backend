@@ -113,6 +113,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # UploadThing Configuration
-# ─────────────────────────────────────────────────────────────────────────────
-UPLOADTHING_SECRET_KEY = os.getenv('UPLOADTHING_SECRET_KEY')
-UPLOADTHING_APP_ID = os.getenv('UPLOADTHING_APP_ID')
+# ────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
