@@ -1,15 +1,14 @@
-
-
 from rest_framework import serializers
-from .models import Photo, Wedding
+from .models import Image, Wedding
+
 
 class WeddingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wedding
-        fields = '__all__'
+        fields = ['id', 'name', 'created_at']
 
 
-class PhotoSerializer(serializers.ModelSerializer):
+class ImageSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Photo
-        fields = '__all__'
+        model = Image
+        fields = ['id', 'wedding', 'image_url', 'uploadthing_key', 'uploaded_at']
