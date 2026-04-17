@@ -8,30 +8,60 @@ from rest_framework.response import Response
 from django.conf import settings
 
 from .models import Image, Wedding,FaceEncoding
-
+from django.http import JsonResponse
 
 from .services.face_encode import encode_faces
 
+from django.conf import settings
+from django.contrib.auth.models import User
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.contrib.auth.models import User
+from .models import Wedding
 
 
-
-
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import Image
 
 
 @api_view(['POST'])
 def create_wedding(request):
     name = request.data.get('name')
+    date = request.data.get('date')
+    location = request.data.get('location')
 
     if not name:
-        return Response({"error": "Wedding name is required"}, status=400)
+        return Response({"error": "Name required"}, status=400)
 
-    wedding = Wedding.objects.create(name=name)
+    
+    user = request.user if request.user.is_authenticated else User.objects.first()
+
+    wedding = Wedding.objects.create(
+        name=name,
+        date=date,
+        location=location,
+        created_by=user
+    )
 
     return Response({
-        "message": "Wedding created successfully",
         "wedding_id": wedding.id,
         "name": wedding.name
     })
+# @api_view(['POST'])
+# def create_wedding(request):
+#     name = request.data.get('name')
+
+#     if not name:
+#         return Response({"error": "Wedding name is required"}, status=400)
+
+#     wedding = Wedding.objects.create(name=name)
+
+#     return Response({
+#         "message": "Wedding created successfully",
+#         "wedding_id": wedding.id,
+#         "name": wedding.name
+#     })
 
 
 
@@ -136,3 +166,45 @@ def scan_face(request):
     return Response({
         "matched_images": list(matched_images)
     })
+@api_view(['GET'])
+def list_weddings(request):
+    weddings = Wedding.objects.all().order_by('-id')
+
+    data = []
+    for w in weddings:
+        data.append({
+            "id": str(w.id),
+            "title": w.name,
+            "date": w.date.isoformat() if w.date else None,
+            "location": w.location if w.location else "No location",
+            "createdBy": {
+                "name": w.created_by.username if w.created_by else "Unknown"
+            },
+            "photoCount": 0
+        })
+
+    return Response(data)
+
+
+@api_view(['DELETE'])
+def delete_wedding(request, id):
+    try:
+        wedding = Wedding.objects.get(id=id)
+        wedding.delete()
+        return Response({"success": True})
+    except Wedding.DoesNotExist:
+        return Response({"error": "Not found"}, status=404)
+    
+
+
+def get_images_by_event(request, event_id):
+    images = Image.objects.filter(wedding_id=event_id)
+
+    data = []
+    for img in images:
+        data.append({
+            "id": img.id,
+            "image": request.build_absolute_uri(img.image.url)  # FIX
+        })
+
+    return JsonResponse(data, safe=False)
